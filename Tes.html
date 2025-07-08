@@ -1,0 +1,65 @@
+import { Pipe } from '@/types/materials';
+
+
+
+export const pipes: Pipe[] = [
+  // JIS例（sizeはJISサイズリテラル）
+
+  {
+    id: 'SGP',
+    standard: 'JIS G 3452',
+    materialId: ['SGP'],
+    sizeType: 'JIS',
+    sizes: {
+     
+      '100A': { '114.3*4.5': { od: 114.3, t: 4.5 } },
+      '125A': { '139.8*4.5': { od: 139.8, t: 4.5 } },
+      '150A': { '165.2*5.0': { od: 165.2, t: 5.0 } },
+      '175A': { '190.7*5.3': { od: 190.7, t: 5.3 } },
+      '200A': { '216.3*5.8': { od: 216.3, t: 5.8 } },
+      '225A': { '241.8*6.2': { od: 241.8, t: 6.2 } },
+      '250A': { '267.4*6.6': { od: 267.4, t: 6.6 } },
+      '300A': { '318.5*6.9': { od: 318.5, t: 6.9 } },
+      '350A': { '355.6*7.9': { od: 355.6, t: 7.9 } },
+      '400A': { '406.4*7.9': { od: 406.4, t: 7.9 } },
+      '450A': { '457.2*7.9': { od: 457.2, t: 7.9 } },
+      '500A': { '508.0*7.9': { od: 508.0, t: 7.9 } },
+    },
+  },
+
+
+
+  // ASTM例（sizeはインチ表記）
+  {
+    id: 'A106B',
+    standard: 'ASTM',
+    materialId: ["A106B", "SUS304", 'SUS316', 'GOLD24K'],   // 複数材質を配列で保持
+    sizeType: 'ASTM',
+    sizes: {
+      '1/8': {
+        'Sch40': { od: 10.287, t: 1.7272 }, 'Sch80': { od: 10.287, t: 2.413 }, 'Sch10s': { od: 10.287, t: 1.2446 }, 'Sch40s': { od: 10.287, t: 1.7272 }, 'Sch80s': { od: 10.287, t: 2.413 },
+      },
+
+
+
+
+
+    },
+  },
+
+
+export const elbowExample: Elbow = {
+  id: 'ELB-90',
+  standard: 'JIS B2311',
+  materialId: 'SGP',
+  sizeType: 'JIS',
+  sizes: {
+    '100A': { 'FSGP': { od: 114.3, t: 4.5, bendRadius: 152.4 }, },
+    '125A': {
+      'FSGP': { od: 139.8, t: 4.5, bendRadius: 190.5 },
+    },
+  },
+  angle: 90,
+};
+
+];

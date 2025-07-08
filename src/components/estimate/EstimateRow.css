@@ -1,0 +1,76 @@
+.estimate-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: nowrap;
+  width: 100%;           /* 幅いっぱい */
+  margin: 0;             /* 余白リセット */
+  box-sizing: border-box;
+  justify-content: flex-start; /* 左寄せ */
+}
+
+
+
+.select-type {
+  width: 100px;
+  /* 形状セレクト幅 */
+}
+
+.select-standard {
+  width: 80px;
+  /* 規格セレクト幅 */
+}
+
+.select-material {
+  width: 100px;
+  /* 材質セレクト幅 */
+}
+
+.select-size {
+  width: 80px;
+  /* サイズセレクト幅 */
+}
+
+.select-schedule {
+  width: 100px;
+  /* スケジュールセレクト幅 */
+}
+
+.select-class {
+  width: 120px;
+  /* クラスセレクト幅 */
+}
+
+.length-input-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.input-length {
+  width: 65px;
+  /* 長さ入力幅 */
+}
+
+.select-unit {
+  width: 50px;
+}
+
+.input-quantity {
+  width: 80px;
+  /* 個数入力幅 */
+}
+
+.converted-display {
+  white-space: nowrap;
+  font-size: 0.9em;
+  color: #666;
+}
+
+.weight-display {
+  min-width: 80px;
+  /* 重量表示幅 */
+  white-space: nowrap;
+  /* テキスト折り返し防止 */
+}

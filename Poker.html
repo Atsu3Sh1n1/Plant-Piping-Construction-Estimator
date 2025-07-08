@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ポーカーカードカウンター（スート対応・役候補数付き）</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 2rem;
+            background: #f4f6f8;
+            color: #333;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .warning {
+            background: #fff4f4;
+            color: #a00;
+            padding: 0.75rem 1rem;
+            border-left: 5px solid red;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            font-weight: bold;
+            margin-bottom: 0.2rem;
+            display: block;
+        }
+
+        select,
+        input[type="number"] {
+            width: 100%;
+            max-width: 300px;
+            padding: 0.5rem;
+            font-size: 1rem;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        .card-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+            gap: 6px;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .card-buttons button {
+            font-weight: bold;
+            font-size: 15px;
+            padding: 0.6rem;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            background: #eee;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .card-buttons button.active {
+            background: #007acc;
+            color: white;
+            border-color: #007acc;
+        }
+
+        .results {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+        }
+
+        ul {
+            padding-left: 1.2rem;
+        }
+
+        .reset-btn {
+            margin-top: 0.5rem;
+            background: #ff4d4f;
+            color: white;
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .hand-possibility {
+            margin-top: 1rem;
+            background: #e7f9e7;
+            border-left: 4px solid #2e8b57;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>ポーカーカードカウンター（改良版）</h1>
+
+    <div class="warning">
+        ※ 本ツールは旧ルール（52枚構成・ジョーカーなし）を前提としています。<br />
+        変則デッキやローカルルールでは結果が異なる可能性があります。
+    </div>
+
+    <div class="input-group">
+        <label for="ruleSelect">ルールを選択:</label>
+        <select id="ruleSelect">
+            <option value="texas">テキサスホールデム（手札2枚）</option>
+            <option value="omaha">オマハ（手札4枚）</option>
+            <option value="stud">7カードスタッド（手札7枚）</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label for="playerCount">プレイヤー人数（自分含む）:</label>
+        <input type="number" id="playerCount" min="2" max="10" value="2">
+    </div>
+
+    <!-- コミュニティカード入力欄追加 -->
+    <div class="community-cards">
+        <div class="community-title">コミュニティカード:</div>
+        <div class="card-buttons" id="communityCardButtons"></div>
+    </div>
+
+    <div class="input-group">
+        <label>見たカード（スート付きでカウント）:</label>
+        <div class="card-buttons" id="cardButtons"></div>
+        <button class="reset-btn" onclick="resetCounts()">全てリセット</button>
+    </div>
+
+    <div class="results">
+        <h2>残りカードの構成</h2>
+        <ul id="cardCountList"></ul>
+        <p id="summary"></p>
+
+        <div class="hand-possibility" id="handPossibility">
+            <strong>成立可能な役候補:</strong>
+            <ul id="possibleHands"></ul>
+        </div>
+    </div>
+
+    <script>
+        const suits = ['♠', '♥', '♦', '♣'];
+        const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+        const seen = {}; // seen['A♠'] = 0〜1
+        const communityCards = new Set(); // コミュニティカードを保持
+
+        // 初期化
+        for (const r of ranks) {
+            for (const s of suits) {
+                seen[`${r}${s}`] = 0;
+            }
+        }
+
+        const ruleSelect = document.getElementById('ruleSelect');
+        const playerCountInput = document.getElementById('playerCount');
+        const cardButtonsContainer = document.getElementById('cardButtons');
+        const communityCardButtonsContainer = document.getElementById('communityCardButtons');
+        const cardCountList = document.getElementById('cardCountList');
+        const summary = document.getElementById('summary');
+        const possibleHands = document.getElementById('possibleHands');
+
+        function getHandCardsPerPlayer() {
+            switch (ruleSelect.value) {
+                case 'texas': return 2;
+                case 'omaha': return 4;
+                case 'stud': return 7;
+                default: return 2;
+            }
+        }
+
+        function getRuleName() {
+            switch (ruleSelect.value) {
+                case 'texas': return 'テキサスホールデム';
+                case 'omaha': return 'オマハ';
+                case 'stud': return '7カードスタッド';
+                default: return '不明';
+            }
+        }
+
+        // ストレート可能性チェック
+        function checkStraightPossibility(rankCounts) {
+            const sequence = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']; // Aを両端に
+            let maxLength = 0;
+
+            for (let i = 0; i <= sequence.length - 5; i++) {
+                let length = 0;
+                for (let j = 0; j < 5; j++) {
+                    if (rankCounts[sequence[i + j]] > 0) length++;
+                }
+                maxLength = Math.max(maxLength, length);
+            }
+
+            return maxLength >= 4 ? `ストレート：可能性あり（最大${maxLength}連続）` : null;
+        }
+
+        // フラッシュ可能性チェック
+        function checkFlushPossibility() {
+            const suitCounts = {};
+            for (const s of suits) {
+                suitCounts[s] = 0;
+                for (const r of ranks) {
+                    if (!seen[`${r}${s}`] && !communityCards.has(`${r}${s}`)) {
+                        suitCounts[s]++;
+                    }
+                }
+            }
+
+            const results = [];
+            for (const [suit, count] of Object.entries(suitCounts)) {
+                if (count >= 5) results.push(`フラッシュ（${suit}）：可能`);
+                else if (count >= 3) {
+                    // コミュニティカードで既に同じスートがあるかチェック
+                    let communityCount = 0;
+                    for (const card of communityCards) {
+                        if (card.endsWith(suit)) communityCount++;
+                    }
+                    if (communityCount + count >= 5) {
+                        results.push(`フラッシュ（${suit}）：あと${5 - communityCount}枚必要`);
+                    }
+                }
+            }
+            return results;
+        }
+
+        function updateResults() {
+            cardCountList.innerHTML = '';
+            const rankCounts = {};
+
+            // 各ランクの残り枚数を計算
+            ranks.forEach(rank => {
+                rankCounts[rank] = 0;
+
+                suits.forEach(suit => {
+                    const card = `${rank}${suit}`;
+                    // 見ていない かつ コミュニティカードにも含まれていない場合にカウント
+                    rankCounts[rank] += (seen[card] === 0 && !communityCards.has(card)) ? 1 : 0;
+                });
+
+                const li = document.createElement('li');
+                li.textContent = `${rank}: 残り ${rankCounts[rank]} 枚`;
+                cardCountList.appendChild(li);
+            });
+
+            // 見たカードの合計計算（プレイヤー手札 + コミュニティカード）
+            const totalSeen = Object.values(seen).reduce((sum, v) => sum + v, 0) + communityCards.size;
+
+            // プレイヤー人数と想定カード数
+            const players = parseInt(playerCountInput.value) || 2;
+            const handPerPlayer = getHandCardsPerPlayer();
+            const estimatedSeen = players * handPerPlayer + (ruleSelect.value !== 'stud' ? 5 : 0);
+
+            // サマリー表示
+            summary.innerHTML = `
+    選択ルール: <strong>${getRuleName()}</strong><br>
+    見たカード合計: <strong>${totalSeen} 枚</strong> (コミュニティカード: ${communityCards.size}枚)<br>
+    理論上の想定カード数: <strong>${estimatedSeen} 枚</strong>
+  `;
+
+            // === 役の可能性計算 ===
+            let four = 0, three = 0, pairs = 0;
+            ranks.forEach(rank => {
+                const count = rankCounts[rank];
+                if (count === 4) four++;
+                if (count >= 3) three++;
+                if (count >= 2) pairs++;
+            });
+
+            const hands = [];
+            if (four > 0) hands.push(`フォーカード：${four}通り`);
+            if (three > 0 && pairs > 1) hands.push(`フルハウス：${Math.min(three * (pairs - 1), 10)}通り`);
+            if (three > 0) hands.push(`スリーカード：${three}通り`);
+            if (pairs >= 2) hands.push(`ツーペア：${Math.floor(pairs * (pairs - 1) / 2)}通り`);
+
+            // ストレートチェック
+            const straightInfo = checkStraightPossibility(rankCounts);
+            if (straightInfo) hands.push(straightInfo);
+
+            // フラッシュチェック
+            const flushInfos = checkFlushPossibility();
+            flushInfos.forEach(info => hands.push(info));
+
+            possibleHands.innerHTML = hands.length > 0
+                ? hands.map(h => `<li>${h}</li>`).join('')
+                : '<li>現時点では役が構築できる可能性は低い</li>';
+        }
+        function createCardButtons(container, isCommunity = false) {
+            for (const rank of ranks) {
+                for (const suit of suits) {
+                    const key = `${rank}${suit}`;
+                    const btn = document.createElement('button');
+                    btn.textContent = key;
+                    btn.id = `${isCommunity ? 'community-' : ''}btn-${key}`;
+                    btn.onclick = () => {
+                        if (isCommunity) {
+                            if (communityCards.has(key)) {
+                                communityCards.delete(key);
+                            } else {
+                                communityCards.add(key);
+                            }
+                        } else {
+                            seen[key] = seen[key] === 0 ? 1 : 0;
+                        }
+                        updateButtonState(key, isCommunity);
+                        updateResults();
+                    };
+                    container.appendChild(btn);
+                }
+            }
+        }
+
+        function updateButtonState(key, isCommunity = false) {
+            const btn = document.getElementById(`${isCommunity ? 'community-' : ''}btn-${key}`);
+            if (isCommunity) {
+                btn.classList.toggle('active', communityCards.has(key));
+            } else {
+                btn.classList.toggle('active', seen[key] === 1);
+            }
+        }
+
+        function resetCounts() {
+            for (const key in seen) {
+                seen[key] = 0;
+                updateButtonState(key);
+            }
+            communityCards.clear();
+            document.querySelectorAll('#communityCardButtons button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            updateResults();
+        }
+
+        ruleSelect.addEventListener('change', updateResults);
+        playerCountInput.addEventListener('input', updateResults);
+
+        // 通常カードボタンとコミュニティカードボタンを初期化
+        createCardButtons(cardButtonsContainer);
+        createCardButtons(communityCardButtonsContainer, true);
+        updateResults();
+    </script>
+</body>
+
+</html>
