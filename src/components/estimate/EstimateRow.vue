@@ -2,8 +2,9 @@
   <div class="estimate-row">
     <select v-model="selectedType" @change="resetSelections" class="select-type">
       <option disabled value="">Select Type</option>
-      <option value="pipe">Pipe</option>
-      <option value="valve">Valve</option>
+      <option v-for="(config, type) in itemConfigs" :key="type" :value="type">
+        {{ type.charAt(0).toUpperCase() + type.slice(1) }}
+      </option>
     </select>
 
     <select v-model="selectedStandard" @change="updateMaterialOptions" :disabled="!selectedType" class="select-standard">
@@ -24,7 +25,7 @@
     </select>
 
     <select
-      v-if="selectedType === 'pipe'"
+      v-if="currentConfig?.hasSchedule"
       v-model="selectedSchedule"
       @change="calculateWeight"
       :disabled="!selectedSize"
@@ -37,7 +38,7 @@
     </select>
 
     <select
-      v-if="selectedType === 'valve'"
+      v-if="currentConfig?.hasClass"
       v-model="selectedClass"
       @change="calculateWeight"
       :disabled="!selectedSize"
@@ -49,8 +50,8 @@
       </option>
     </select>
 
-    <!-- パイプの長さ入力 -->
-    <div v-if="selectedType === 'pipe'" class="length-input-group">
+    <!-- 長さ入力 -->
+    <div v-if="currentConfig?.inputType === 'length'" class="length-input-group">
       <input
         type="number"
         v-model.number="lengthValue"
@@ -58,10 +59,10 @@
         min="0"
         step="0.01"
         @input="calculateWeight"
-        :disabled="!selectedSchedule"
+        :disabled="!isInputEnabled"
         class="input-length"
       />
-      <select v-model="sharedUnit" @change="calculateWeight" :disabled="!selectedSchedule" class="select-unit">
+      <select v-model="sharedUnit" @change="calculateWeight" :disabled="!isInputEnabled" class="select-unit">
         <option value="m">m</option>
         <option value="ft">ft</option>
       </select>
@@ -70,16 +71,16 @@
       </div>
     </div>
 
-    <!-- バルブの個数入力 -->
+    <!-- 個数入力 -->
     <input
-      v-if="selectedType === 'valve'"
+      v-if="currentConfig?.inputType === 'quantity'"
       type="number"
       v-model.number="quantity"
       placeholder="Quantity"
       min="0"
       step="1"
       @input="calculateWeight"
-      :disabled="!selectedClass"
+      :disabled="!isInputEnabled"
       class="input-quantity"
     />
 
@@ -88,8 +89,10 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useEstimateRow } from '@/composables/estimate/useEstimateRow';
 import { injectUnit } from '@/composables/estimate/useSharedUnit';
+import { ITEM_CONFIGS } from '@/types/itemTypes';
 import './EstimateRow.css';
 
 const sharedUnit = injectUnit();
@@ -117,6 +120,13 @@ const {
   calculateWeight,
   getRowData,
 } = useEstimateRow(sharedUnit);
+
+const itemConfigs = ITEM_CONFIGS;
+const currentConfig = computed(() => selectedType.value ? ITEM_CONFIGS[selectedType.value as keyof typeof ITEM_CONFIGS] : null);
+const isInputEnabled = computed(() => {
+  if (!currentConfig.value) return false;
+  return currentConfig.value.hasClass ? !!selectedClass.value : !!selectedSchedule.value;
+});
 
 defineExpose({ getRowData });
 </script>

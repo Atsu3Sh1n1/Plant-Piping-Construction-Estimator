@@ -1,64 +1,62 @@
-// composables/estimate/useElbowCalculator.ts
 import type { Elbow } from '@/types/materials';
 import { materials } from '@/data/materials/materials';
 
 export function useElbowCalculator() {
-  // 材質IDから密度取得
-  const getDensity = (materialId: string): number => {
-    const material = materials.find(m => m.id === materialId);
-    return material?.density ?? 7.85;
-  };
-
-  /**
-   * エルボ重量計算
-   * @param elbow Elbow型
-   * @param size サイズ文字列（例: '100A'）
-   * @param schedule スケジュール文字列（例: 'FSGP'）
-   * @param materialId 材質ID
-   * @returns 重量(kg)
-   */
   const calculateElbowWeight = (
     elbow: Elbow,
     size: string,
     schedule: string,
+    quantity: number,
     materialId: string
   ): number => {
-    const sizeInfo = elbow.sizes[size];
-    if (!sizeInfo) return 0;
+    // Find the schedule data, handling comma-separated keys
+    let sizeData;
+    const sizeObj = elbow.sizes[size];
+    if (!sizeObj) return 0;
+    
+    // Look for exact match first
+    if (sizeObj[schedule]) {
+      sizeData = sizeObj[schedule];
+    } else {
+      // Look for comma-separated key that contains the schedule
+      const matchingKey = Object.keys(sizeObj).find(key => 
+        key.includes(',') && key.split(',').includes(schedule)
+      );
+      if (matchingKey) {
+        sizeData = sizeObj[matchingKey];
+      }
+    }
+    
+    if (!sizeData) return 0;
 
-    const sch = sizeInfo[schedule];
-    if (!sch) return 0;
+    const material = materials.find(m => m.id === materialId);
+    if (!material) return 0;
 
-    const { od, t, bendRadius } = sch;
-    const rOuter = od / 2;
-    const rInner = rOuter - t;
+    const { od, t, bendRadius } = sizeData;
+    const density = sizeData.density || material.density;
 
-    // 断面積 (mm²)
-    const crossSectionArea = Math.PI * (rOuter ** 2 - rInner ** 2);
-
+    // エルボの重量計算：曲げ部分の体積を計算
     // 曲げ角度をラジアンに変換
     const angleRad = (elbow.angle * Math.PI) / 180;
-
-    // 中心線長さ (mm)
-    const centerLineLength = angleRad * bendRadius;
-
-    // 体積 mm³ = 断面積 × 中心線長さ
-    const volume = crossSectionArea * centerLineLength;
-
-    // 材質密度 (g/cm³) ※sch.density優先
-    const density = sch.density ?? getDensity(materialId);
-
-    // 体積を cm³ に変換 (1 mm³ = 0.001 cm³)
-    const volume_cm3 = volume * 0.001;
-
-    // 重量 kg = 体積(cm³) × 密度(g/cm³) ÷ 1000
-    const weight_kg = (volume_cm3 * density) / 1000;
-
-    return Number(weight_kg.toFixed(3));
+    
+    // 中心線長さ = 曲げ半径 × 角度(ラジアン)
+    const centerlineLength = bendRadius * angleRad;
+    
+    // パイプの断面積 = π × ((外径/2)² - (内径/2)²)
+    const id = od - 2 * t; // 内径
+    const crossSectionArea = Math.PI * ((od/2)**2 - (id/2)**2);
+    
+    // 体積 = 断面積 × 中心線長さ
+    const volume = crossSectionArea * centerlineLength;
+    
+    // 重量 = 体積 × 密度 × 個数
+    // 密度をg/cm³からkg/m³に変換 (×1000)、体積をmm³からm³に変換 (÷1000000000)
+    const weight = (volume / 1000000000) * (density * 1000) * quantity;
+    
+    return weight;
   };
 
   return {
     calculateElbowWeight,
-    getDensity,
   };
 }

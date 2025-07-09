@@ -13,10 +13,10 @@ export const materials: Material[] = [
 
   { id: 'SUS316', name: 'Stainless Steel 316', density: 8.000 },
   { id: 'SUS310S', name: 'Stainless Steel 310S', density: 7.990 },
-  { id: 'CS', name: 'Carbon Steel', density: 7.87 },
+  { id: 'CS', name: 'Carbon Steel', density: 7.85 },
 
   // 貴金属
-  { id: 'GOLD24K', name: 'Gold 24K', density: 19.32 },
+  { id: 'GOLD-24K', name: 'Gold 24K', density: 19.32 },
   { id: 'GOLD22K', name: 'Gold 22K', density: 17.90 },
   { id: 'GOLD18K', name: 'Gold 18K', density: 15.58 },
   { id: 'GOLD14K', name: 'Gold 14K', density: 13.30 },

@@ -1,12 +1,17 @@
-export const elbowExample: Elbow = {
-  id: 'ELB-90',
-  standard: 'JIS B2311',
-  materialId: 'SGP',
-  sizeType: 'JIS',
-  sizes: {
-    '100A': {'FSGP': { od: 114.3, t: 4.5, bendRadius: 152.4 },},
-    '125A': {'FSGP': { od: 139.8, t: 4.5, bendRadius: 190.5 },
-    },
-  },
-  angle: 90,
-};
+import type { Elbow } from '@/types/materials';
+
+export const elbows: Elbow[] = [
+  {
+    id: 'elbow-jis-90',
+    standard: 'JIS B2313',
+    materialId: ['CS', 'SUS304', 'SUS316', 'GOLD-24K'],
+    sizeType: 'JIS',
+    angle: 90,
+    sizes: {
+      '100A': {
+        'Sch40,Sch40s': { od: 114.3, t: 6.0, bendRadius: 152.4 },
+        'Sch80,Sch80s': { od: 114.3, t: 8.6, bendRadius: 152.4 }
+      },
+    }
+  }
+];
